@@ -1,8 +1,8 @@
 /**
  * @file server.cpp
  * @author Enrique Cavanillas Puga
- * @brief This is a dummy-test server.
- * @version 0.1
+ * @brief This is a dummy-test echo server using TCP protocol.
+ * @version 0.2
  * @date 2022-06-26
  * 
  */
@@ -17,34 +17,35 @@
 #include <netdb.h>
 
 #define BUF_SIZE 500
+#define MAX_CONNECTION_REQUESTS 1
 
 int main(int argc, char *argv[])
 {
-    struct addrinfo hints;
-    struct addrinfo *result, *rp;
-    int sfd, s;
-    struct sockaddr_storage peer_addr;
-    socklen_t peer_addr_len;
-    ssize_t nread;
-    char buf[BUF_SIZE];
 
-    if (argc != 2)
+    if (argc != 3)
     {
-        fprintf(stderr, "Usage: %s port\n", argv[0]);
+        fprintf(stderr, "Usage: %s server %s port\n", argv[0], argv[1]);
         exit(EXIT_FAILURE);
     }
 
+    struct addrinfo hints;
+    struct addrinfo *result, *rp;
+    sockaddr_storage addr;
+    socklen_t addrlen = sizeof(addr);
+    int s, sfd, clsfd, rcv;
+    char host[NI_MAXHOST], serv[NI_MAXSERV], buf[BUF_SIZE];
+
+
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-    hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
-    hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
+    hints.ai_flags = 0;
+    hints.ai_socktype = SOCK_STREAM; /* Datagram socket */
     hints.ai_protocol = 0;          /* Any protocol */
     hints.ai_canonname = NULL;
     hints.ai_addr = NULL;
     hints.ai_next = NULL;
 
-    s = getaddrinfo(NULL, argv[1], &hints, &result);
-    if (s != 0)
+    if (getaddrinfo(argv[1], argv[2], &hints, &result))
     {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
         exit(EXIT_FAILURE);
@@ -75,30 +76,33 @@ int main(int argc, char *argv[])
 
     freeaddrinfo(result); /* No longer needed */
 
+    if (listen(sfd, MAX_CONNECTION_REQUESTS))
+    {
+        fprintf(stderr,"Error listening\n");
+        exit(EXIT_FAILURE);
+    }
+
     /* Read datagrams and echo them back to sender */
 
-    for (;;)
+    while (true)
     {
-        peer_addr_len = sizeof(struct sockaddr_storage);
-        nread = recvfrom(sfd, buf, BUF_SIZE, 0,
-                         (struct sockaddr *)&peer_addr, &peer_addr_len);
-        if (nread == -1)
-            continue; /* Ignore failed request */
+        clsfd = accept(sfd, (sockaddr*)&addr, &addrlen);
+        getnameinfo((sockaddr *)&addr,
+                        addrlen, host, NI_MAXHOST,
+                        serv, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
+        printf("Connection from %s:%s\n", host, serv);
 
-        char host[NI_MAXHOST], service[NI_MAXSERV];
+        while(rcv = recv(clsfd, buf, BUF_SIZE, 0))
+        {
+            buf[rcv] = '\0';
+            printf("\tRecieved: %s", buf);
+            send(clsfd, buf, rcv, 0);
+            sleep(1);
+        }
 
-        s = getnameinfo((struct sockaddr *)&peer_addr,
-                        peer_addr_len, host, NI_MAXHOST,
-                        service, NI_MAXSERV, NI_NUMERICSERV);
-        if (s == 0)
-            printf("Received %zd bytes from %s:%s\n",
-                   nread, host, service);
-        else
-            fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-
-        if (sendto(sfd, buf, nread, 0,
-                   (struct sockaddr *)&peer_addr,
-                   peer_addr_len) != nread)
-            fprintf(stderr, "Error sending response\n");
+        close(clsfd);
+        printf("Connection closed: %s:%s\n", host, serv);
     }
+    
+    return 0;
 }
