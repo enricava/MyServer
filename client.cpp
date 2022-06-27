@@ -47,7 +47,6 @@ int main(int argc, char *argv[]){
     Try each address until we successfully connect(2).
     If socket(2)(or connect(2)) fails, we(close the socket and) try the next address.*/
 
-                                                                                                                                                 for (rp = result; rp != NULL; rp = rp->ai_next)
     for (rp = result; rp != NULL; rp = rp->ai_next) {
         sfd = socket(rp->ai_family, rp->ai_socktype,
                      rp->ai_protocol);
