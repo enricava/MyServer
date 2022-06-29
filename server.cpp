@@ -1,8 +1,8 @@
 /**
  * @file server.cpp
  * @author Enrique Cavanillas Puga
- * @brief This is a dummy-test echo server using TCP protocol.
- * @version 0.2
+ * @brief This is a server that can send files using TCP protocol. Sends file after every echo.
+ * @version 0.3
  * @date 2022-06-26
  * 
  */
@@ -16,14 +16,43 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#define BUF_SIZE 500
+#define BUF_SIZE 64
 #define MAX_CONNECTION_REQUESTS 1
 
-int main(int argc, char *argv[])
-{
+/* For now the file name is a constant */
+const char *filename = "dummy-server.txt";
 
-    if (argc != 3)
-    {
+bool send_file(const char * fname, int clsfd){
+    FILE * fd = fopen(filename, "r");
+    if (fd == NULL)
+        return false;
+
+    fseek(fd, 0, SEEK_END);
+    long remaining = ftell(fd);
+    fseek(fd, 0, SEEK_SET);
+
+    char data[BUF_SIZE];
+    bool ok = true;
+
+    while(fread(data, 1, (remaining < BUF_SIZE)? remaining: BUF_SIZE, fd) > 0){
+        if(send(clsfd, data, (remaining < BUF_SIZE)? remaining: BUF_SIZE, 0) <= 0){
+            fprintf(stderr, "Error sending data\n");
+            return false;
+        }
+        remaining -= BUF_SIZE;
+        bzero(data, BUF_SIZE);
+    }
+    fclose(fd);
+
+    data[0] = EOF;     /* Signal EOF */
+    ok = send(clsfd, data, 1, 0) > 0;
+    
+    return ok;
+}
+
+int main(int argc, char *argv[]){
+
+    if (argc != 3){
         fprintf(stderr, "Usage: %s server %s port\n", argv[0], argv[1]);
         exit(EXIT_FAILURE);
     }
@@ -45,8 +74,7 @@ int main(int argc, char *argv[])
     hints.ai_addr = NULL;
     hints.ai_next = NULL;
 
-    if (getaddrinfo(argv[1], argv[2], &hints, &result))
-    {
+    if (getaddrinfo(argv[1], argv[2], &hints, &result)){
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
         exit(EXIT_FAILURE);
     }
@@ -55,8 +83,7 @@ int main(int argc, char *argv[])
        Try each address until we successfully bind(2).
        If socket(2) (or bind(2)) fails, we (close the socket
        and) try the next address. */
-    for (rp = result; rp != NULL; rp = rp->ai_next)
-    {
+    for (rp = result; rp != NULL; rp = rp->ai_next){
         sfd = socket(rp->ai_family, rp->ai_socktype,
                      rp->ai_protocol);
         if (sfd == -1)
@@ -68,36 +95,34 @@ int main(int argc, char *argv[])
         close(sfd);
     }
 
-    if (rp == NULL)
-    { /* No address succeeded */
+    if (rp == NULL){ /* No address succeeded */
         fprintf(stderr, "Could not bind\n");
         exit(EXIT_FAILURE);
     }
 
     freeaddrinfo(result); /* No longer needed */
 
-    if (listen(sfd, MAX_CONNECTION_REQUESTS))
-    {
+    if (listen(sfd, MAX_CONNECTION_REQUESTS)){
         fprintf(stderr,"Error listening\n");
         exit(EXIT_FAILURE);
     }
 
     /* Read datagrams and echo them back to sender */
 
-    while (true)
-    {
+    while (true){
         clsfd = accept(sfd, (sockaddr*)&addr, &addrlen);
         getnameinfo((sockaddr *)&addr,
                         addrlen, host, NI_MAXHOST,
                         serv, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
         printf("Connection from %s:%s\n", host, serv);
 
-        while(rcv = recv(clsfd, buf, BUF_SIZE, 0))
-        {
+        /* For now the file will be sent after every echo */
+        while(rcv = recv(clsfd, buf, BUF_SIZE, 0)){
             buf[rcv] = '\0';
             printf("\tRecieved: %s", buf);
             send(clsfd, buf, rcv, 0);
-            sleep(1);
+            if(send_file(filename, clsfd))
+                printf("File sent successfully.\n");
         }
 
         close(clsfd);

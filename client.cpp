@@ -2,7 +2,7 @@
  * @file client.cpp
  * @author Enrique Cavanillas Puga
  * @brief This is a dummy-test client that allows user to send text using TCP protocol.
- * @version 0.2
+ * @version 0.3
  * @date 2022-06-27
  * 
  */
@@ -15,7 +15,29 @@
 #include <unistd.h>
 #include <string.h>
 
-#define BUF_SIZE 500
+#define BUF_SIZE 64
+
+/* For now the file name is a constant */
+const char *filename = "dummy-client.txt";
+
+bool receive_file(const char *filename, int sfd){
+    FILE * fd = fopen(filename, "w");
+    if (fd == NULL)
+        return false;
+
+    int c;
+    char data[BUF_SIZE];
+    while ((c = recv(sfd, data, BUF_SIZE, 0)) > 0){
+        if (c < BUF_SIZE && data[c-1] == EOF)
+            break;
+        fwrite(data, c, 1, fd);
+    }
+    fwrite(data, c, 1, fd);
+    fclose(fd);
+    printf("Received file\n");
+
+    return true;
+}
 
 int main(int argc, char *argv[]){
     if (argc < 3){
@@ -80,6 +102,9 @@ int main(int argc, char *argv[]){
         c = recv(sfd, buf, BUF_SIZE, 0);    /* Read server message */
         buf[c] = '\0';
         printf("\tServer: %s",buf);
+        printf("Receiving file\n");
+        receive_file(filename, sfd);        /* Receives and saves file sent by server */
+
     }
 
     exit(EXIT_SUCCESS);
