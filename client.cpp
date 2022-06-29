@@ -32,7 +32,6 @@ bool receive_file(const char *filename, int sfd){
             break;
         fwrite(data, c, 1, fd);
     }
-    fwrite(data, c, 1, fd);
     fclose(fd);
     printf("Received file\n");
 
