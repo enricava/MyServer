@@ -23,9 +23,7 @@ def server_init(num_connections=5):
     # Listen for incoming connections
     sock.listen(num_connections)
 
-    active_children = []
-
-    run_dispatcher(sock, active_children)
+    run_dispatcher(sock)
 
 
 
@@ -53,12 +51,11 @@ def handle_connection(connection, client_address):
         os._exit(0)
 
 
-def run_dispatcher(sock, active_children):
+def run_dispatcher(sock):
     """
     Handles multi-process connections
 
     param 1: tcp socket (socket)
-    param 2: list of active children pids (list[int])
     """
     while True:
         # Wait for a connection, accept and fork
@@ -68,9 +65,6 @@ def run_dispatcher(sock, active_children):
         if child_pid == 0:
             # Child process
             handle_connection(connection, client_address)
-        else :
-            # Parent process
-            active_children.append(child_pid)
 
 def main():
     server_init()
