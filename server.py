@@ -2,7 +2,6 @@
 Echo server
 v 0.2
 """
-from http import client
 import socket
 import os
 
