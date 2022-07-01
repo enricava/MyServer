@@ -5,27 +5,6 @@ v 0.2
 import socket
 import os
 
-def server_init(num_connections=5):
-    """
-    Creates TCP socket, binds and listens.
-    Starts dispatcher.
-
-    param1: number of simultaneous connectons (int)
-    """
-    # Create a TCP/IP socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    # Bind the socket to the port
-    server_address = ('localhost', 2222)
-    print('[+] Server starting up on {} port {}'.format(*server_address))
-    sock.bind(server_address)
-
-    # Listen for incoming connections
-    sock.listen(num_connections)
-
-    run_dispatcher(sock)
-
-
 
 def handle_connection(connection, client_address):
     """
@@ -65,6 +44,27 @@ def run_dispatcher(sock):
         if child_pid == 0:
             # Child process
             handle_connection(connection, client_address)
+
+
+def server_init(num_connections=5):
+    """
+    Creates TCP socket, binds and listens.
+    Starts dispatcher.
+
+    param1: number of simultaneous connectons (int)
+    """
+    # Create a TCP/IP socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # Bind the socket to the port
+    server_address = ('localhost', 2222)
+    print('[+] Server starting up on {} port {}'.format(*server_address))
+    sock.bind(server_address)
+
+    # Listen for incoming connections
+    sock.listen(num_connections)
+
+    run_dispatcher(sock)
 
 def main():
     server_init()
