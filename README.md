@@ -2,7 +2,7 @@
 
 The goal of this project is very simple: to build a multiprocess server to enable file transfer to, from and between clients.
 
-## Compile and run (simple copy pasters):
+## Compile and run OLD server/client (simple copy pasters):
 Server:
 
 	g++ -o server.out server.cpp && ./server.out :: 2222
