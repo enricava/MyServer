@@ -1,10 +1,12 @@
 from email import message
 from random import randint
 import re
+from struct import pack
 
 class Message():
 
     def __init__(self, type: str, origin: str, dest: str, data: bytes) -> None:
+        assert ':' not in type+dest+origin 
         self.type = type
         self.origin = origin
         self.dest = dest
@@ -16,6 +18,7 @@ class Message():
     def pack(self, maxsize: int): 
         """
         Divides data into a list of encapsulated packets
+        random_code:type:origin:dest:--data--:eom
 
         returns: list of packets : list[bytes]
         """
@@ -36,23 +39,29 @@ class Message():
         packets.append(header + remaining + eom)
         return packets
 
-    def unpack(self, packet):
+    def unpack(packet):
         """
         TODO
         Receives single packet and returns contents
 
-        returns: code, type, origin, dest, data, eom: bool
+        returns: random code, type, origin, dest, data, eom: bool
         """
         
-        delimiters = [packet.find(b':')]
-        for i in range(3):
-            delimiters.append(packet.find(b':', delimiters[i]))
-        [code, self.type, self.origin, self.dest] = [packet[i:delimiters[i]] for i in range(4)]
-        data_end = packet.find(b':', )
-        data = packet[delimiters[3] + 1 : -packet.reverse().find(b':',)]
+        delimiters = [0]
+        for i in range(4):
+            delimiters.append(packet.find(b':', delimiters[i]+1))
+
+        [code, type, origin, dest] = [packet[delimiters[i]+min(i,1):delimiters[i+1]].decode() for i in range(4)]
+        
+        data = packet[delimiters[4]+1:packet.rfind(b':')]   
+        eom = packet[-1:].decode()  
+        
+        return code, type, origin, dest, data, eom
 
 
 #data = b'This is a test message. As you can see it will be sent in blocks'
 #m = Message('b', 'henry', 'enrique', data)
-#for elem in m.pack(30):
-#    print(elem.decode())
+#for elem in m.pack(26):
+#    print(Message.unpack(elem))
+#    if elem[5] == 0:
+#        print('Message ended')
