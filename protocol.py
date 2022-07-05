@@ -24,8 +24,8 @@ class Message():
         """
         code = randint(0, 255)                   # prevent mixtures among messages
         header = '{}:{}:{}:{}:'.format(code, self.type, self.origin, self.dest).encode()
-        neom = b':1'     # not end of message
-        eom = b':0'      # end of message
+        neom = b':0'     # not end of message
+        eom = b':1'      # end of message
         protocol_length = len(header) + len(eom)
         packets = []
         packet_size = maxsize - protocol_length
@@ -54,7 +54,7 @@ class Message():
         [code, type, origin, dest] = [packet[delimiters[i]+min(i,1):delimiters[i+1]].decode() for i in range(4)]
         
         data = packet[delimiters[4]+1:packet.rfind(b':')]   
-        eom = packet[-1:].decode()  
+        eom = int(packet[-1:].decode())  
         
         return code, type, origin, dest, data, eom
 

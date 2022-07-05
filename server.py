@@ -5,6 +5,7 @@ v 0.2
 import socket
 import os
 
+PACKET_SIZE = 255
 
 def handle_connection(connection, client_address):
     """
@@ -15,7 +16,7 @@ def handle_connection(connection, client_address):
         print( pid, '[+] Connection from',client_address)
         # Receive the data in small chunks and retransmit it
         while True:
-            data = connection.recv(16)
+            data = connection.recv(PACKET_SIZE)
             print( pid, '[+] Received {!r}'.format(data))
             if data:
                 print( pid, '[+] Sending data back to the client')
@@ -57,7 +58,7 @@ def server_init(num_connections=5):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     # Bind the socket to the port
-    server_address = ('localhost', 2222)
+    server_address = ('localhost', 2223)
     print('[+] Server starting up on {} port {}'.format(*server_address))
     sock.bind(server_address)
 
